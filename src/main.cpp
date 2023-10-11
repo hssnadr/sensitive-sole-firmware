@@ -3,37 +3,71 @@
 #include "globals.h"
 #include "ESP32/FilesManager.h"
 #include "ESP32/WifiManager.h"
-#include "Movuino/BatteryManager.h"
-#include "Movuino/MPU9250.h"
-#include "tools/Button.h"
-#include "tools/OSCWifi.h"
-#include "tools/Recorder.h"
+#include "Shields/ResistiveMatrix.h"
 #include "tools/SingleNeopixAnimator.h"
 #include "tools/WifiConfigServer.h"
 
-#define WHITE255 ((255 << 16) | (255 << 8) | 255)
-#define RED ((255 << 16) | (0 << 8) | 0)
-#define GREEN ((0 << 16) | (250 << 8) | 0)
-#define YELLOW ((200 << 16) | (175 << 8) | 0)
-#define BLUE ((0 << 16) | (0 << 8) | 255)
-#define MAGENTA ((255 << 16) | (0 << 8) | 255)
-
-OSCWifi osc;
-BatteryManager battery = BatteryManager();
-Button button = Button(PIN_BUTTON);
-MovuinoMPU9250 mpu = MovuinoMPU9250();
-Recorder recorder = Recorder();
+// Base
 SingleNeopixAnimator led = SingleNeopixAnimator(PIN_NEOPIX);
 
-// Wifi config > change WifiManager static variables organization (move to globals.h?)
-String ssid_ = "";     // MOVUINO_WIFI_SSID
-String password_ = ""; // MOVUINO_WIFI_PASS
-String ip_ = "";       // MOVUINO_WIFI_IP
-String outip_ = "";    // MOVUINO_OSC_OUTIP
-/*
-    + MOVUINO_OSC_PORT_IN
-    + MOVUINO_OSC_PORT_OUT
-*/
+// Shield
+#define COLS 7 // NOTE (first shield): plug 5, 6, 7 pins on 12, 13, 14 of the resistive matrix shield
+#define ROWS 15
+MovuinoResistiveMatrix sole = MovuinoResistiveMatrix(COLS, ROWS);
+
+// Websockets
+AsyncWebServer server(443);
+AsyncWebSocket ws("/ws"); // wss() ?
+
+int latestClientId = -1;
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+{
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+    Serial.println((char *)data); // incoming message
+
+    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+    {
+        ws.textAll("Message from Movuino");
+        if (latestClientId != -1)
+            ws.text(latestClientId, "It's you");
+    }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+    Serial.println(type);
+    switch (type)
+    {
+    case WS_EVT_CONNECT:
+        Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+        client->text("Hello from Movuino");
+        latestClientId = client->id();
+        break;
+    case WS_EVT_DISCONNECT:
+        client->text("Bye from Movuino");
+        Serial.printf("WebSocket client #%u disconnected\n", client->id());
+        break;
+    case WS_EVT_DATA:
+        handleWebSocketMessage(arg, data, len);
+        break;
+    case WS_EVT_PONG:
+        break;
+    case WS_EVT_ERROR:
+        break;
+    }
+}
+
+void startAPWifiConfig()
+{
+    led.setColor(RED);
+    led.blinkOn(200, 5);
+    led.asyncBlinkOn(2000, 400);
+    if (startAccessPoint("Sensitive-Sole", "", "192.168.4.1"))
+    {
+        startWifiConfigServer();
+    };
+}
 
 void setup()
 {
@@ -41,127 +75,72 @@ void setup()
     Serial.begin(115200);
     Serial.println("Welcome and bienvenue sur Movuino");
 
+    // Sensitive sole
+    sole.begin();
+
     // Neopixel
     led.begin();
     led.setBrightness(5);
     led.setColor(BLUE);
     led.forceUpdate();
-    for (int i = 0; i < 3; i++)
-    {
-        delay(100);
-        led.turnOff();
-        led.forceUpdate();
-        delay(100);
-        led.turnOn();
-        led.forceUpdate();
-    }
 
-    // Button
-    button.begin();
-    button.setMaxReClick(3); // less = less validation delay
-
-    // IMU
-    mpu.begin();
-
-    // Recorder example
-    recorder.begin();
-    recorder.newRecord("imu_data");          // create file and start record
-    recorder.defineColumns({"X", "Y", "Z"}); // define data columns
-    recorder.pushData<float>({0, 1, 2});
-    recorder.newRow();
-    recorder.pushData<float>({3, 4, 5});
-    recorder.stop();
-    recorder.listRecords();
-    recorder.readAllRecords();
-    recorder.deleteAllRecords(); // remove example
-
-    // Battery
-    battery.begin();
-    Serial.printf("Battery level = %i%%\n", battery.getLevel());
-
-    // SPIFFS + Read wifi config on flash memory
+    // SPIFFS (read stored config)
     startSPIFFS();
     if (isSPIFFS)
     {
         // Read files for wifi connection setup
         printDirectories();
-        ssid_ = readFile(FILE_SSID);
-        password_ = readFile(FILE_PASSWORD);
-        ip_ = readFile(FILE_IP);
-        outip_ = readFile(FILE_IP_OUT);
+        MOVUINO_WIFI_SSID = readFile(FILE_SSID);
+        MOVUINO_WIFI_PASS = readFile(FILE_PASSWORD);
+        MOVUINO_WIFI_IP = readFile(FILE_IP);
     }
 
     // Wifi connection
-    if (!connectWiFi(ssid_, password_, ip_))
+    if (!connectWiFi(MOVUINO_WIFI_SSID, MOVUINO_WIFI_PASS, MOVUINO_WIFI_IP))
     {
-        // Connection failed -> start access point and wifi config server
+        // Connection failed: start access point and wifi config server
         Serial.println("Failed to connect to Wifi. Starting access point...");
-        if (startAccessPoint("Sensitive-Sole", "", "192.168.4.1"))
-        {
-            startWifiConfigServer();
-
-            // Neopixel animation
-            led.rainbowOn();
-            led.breathOn(500);
-        };
+        startAPWifiConfig();
     }
     else
     {
         // Connection success
         Serial.print("Movuino successfully connected to ");
-        Serial.println(ssid_);
+        Serial.println(MOVUINO_WIFI_SSID);
         Serial.print("IP: ");
-        Serial.println(ip_);
+        Serial.println(MOVUINO_WIFI_IP);
         Serial.println("---------");
 
-        // Start OSC Wifi
-        osc = OSCWifi(outip_, 3400);
-        osc.begin();
+        // Start websocket on server
+        ws.onEvent(onEvent);
+        server.addHandler(&ws);
+        server.begin();
+
+        led.setColor(GREEN);
+        led.breathOn(700, 0.5);
     }
 }
 
 void loop()
 {
-    button.update();
     led.update();
 
-    if (osc.isConnected())
+    if (isWifiConnected())
     {
-        // ON CLICK = send name
-        if (button.isClicked())
+        // Websocket test
+        // String message_ = String("message");
+        // ws.textAll(message_);
+        // delay(3);
+        // ws.cleanupClients(); // to check: https://m1cr0lab-esp32.github.io/remote-control-with-websocket/websocket-setup/
+
+        sole.update();
+        String data_ = "";
+        for (int i = 0; i < sole.rows(); i++)
         {
-            osc.send("/name", "movuino");
-            led.setColor(GREEN);
-            if (button.isOnClickRelease())
-                led.blinkOn(button.timeHoldOnRelease(), 1);
+            data_ += sole.printRow(i);
+            data_ += 'q';
         }
-
-        // ON DOUBLE CLICK = send ip
-        if (button.isDoubleClicked())
-        {
-            osc.send("/ip", {getIP()[0], getIP()[1], getIP()[2], getIP()[3]});
-
-            led.setColor(BLUE);
-            if (button.isOnDoubleClickRelease())
-                led.blinkOn(button.timeHoldOnRelease(), 2);
-        }
-
-        mpu.update();
-        osc.send("/acc", {mpu.ax, mpu.ay, mpu.az});
-        osc.send("/gyr", {mpu.gx, mpu.gy, mpu.gz});
-        delay(1);
-    }
-
-    // ON TRIPLE CLICK = set access point + wifi config page
-    if (button.isTripleClicked())
-    {
-        led.setColor(RED);
-        if (button.isOnTripleClickRelease())
-            led.blinkOn(button.timeHoldOnRelease(), 3);
-
-        if (startAccessPoint("Sensitive-Sole", "", "192.168.4.1"))
-        {
-            startWifiConfigServer();
-        }
+        ws.textAll(data_);
+        delay(15);
     }
 }
