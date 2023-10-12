@@ -6,9 +6,11 @@
 #include "Shields/ResistiveMatrix.h"
 #include "tools/SingleNeopixAnimator.h"
 #include "tools/WifiConfigServer.h"
+#include "Movuino/MPU9250.h"
 
 // Base
 SingleNeopixAnimator led = SingleNeopixAnimator(PIN_NEOPIX);
+MovuinoMPU9250 mpu = MovuinoMPU9250();
 
 // Shield
 #define COLS 7 // NOTE (first shield): plug 5, 6, 7 pins on 12, 13, 14 of the resistive matrix shield
@@ -77,6 +79,7 @@ void setup()
 
     // Sensitive sole
     sole.begin();
+    mpu.begin();
 
     // Neopixel
     led.begin();
@@ -133,14 +136,25 @@ void loop()
         // delay(3);
         // ws.cleanupClients(); // to check: https://m1cr0lab-esp32.github.io/remote-control-with-websocket/websocket-setup/
 
+        mpu.update();
+        String data_ = "a";
+        data_ += String(mpu.ax);
+        data_ += ",";
+        data_ += String(mpu.ay);
+        data_ += ",";
+        data_ += String(mpu.az);
+        ws.textAll(data_);
+        delay(15);
+
         sole.update();
-        String data_ = "";
+        data_ = "z";
         for (int i = 0; i < sole.rows(); i++)
         {
             data_ += sole.printRow(i);
             data_ += 'q';
         }
         ws.textAll(data_);
+        // Serial.println(data_); // for Processing
         delay(15);
     }
 }

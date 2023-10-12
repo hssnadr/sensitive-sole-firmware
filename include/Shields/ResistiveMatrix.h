@@ -130,8 +130,7 @@ int MovuinoResistiveMatrix::readMux(int col)
 
 String MovuinoResistiveMatrix::printRow(int row_)
 {
-  String data_ = "z";
-  data_ += String(row_);
+  String data_ = String(row_);
 
   for (int j = 0; j < this->_cols; j++)
   {
