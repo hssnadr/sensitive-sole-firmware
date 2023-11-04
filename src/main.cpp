@@ -13,13 +13,13 @@
 MovuinoMPU9250 mpu = MovuinoMPU9250();
 
 // Shield
-#define COLS 7 // NOTE (first shield): plug 5, 6, 7 pins on 12, 13, 14 of the resistive matrix shield
+#define COLS 7
 #define ROWS 15
 MovuinoResistiveMatrix sole = MovuinoResistiveMatrix(COLS, ROWS);
 
 // Websockets
 AsyncWebServer server(443);
-AsyncWebSocket ws("/ws"); // wss() ?
+AsyncWebSocket ws("/ws");
 
 int latestClientId = -1;
 
@@ -137,36 +137,34 @@ void loop()
         // delay(3);
         // ws.cleanupClients(); // to check: https://m1cr0lab-esp32.github.io/remote-control-with-websocket/websocket-setup/
 
-        mpu.update();
-        String data_ = "a";
-        data_ += String(mpu.ax);
-        // data_ += "0.5";
-        data_ += ",";
-        data_ += String(mpu.ay);
-        // data_ += "-0.5";
-        data_ += ",";
-        data_ += String(mpu.az);
-        // data_ += "1";
+        // Time
+        String data_ = "t";
+        data_ += String(millis());
         data_ += "\n";
 
-        sole.update();
-        // Serial.println(sole.printRow(1));
+        // IMU
+        mpu.update();
+        data_ += "a";
+        data_ += String(mpu.ax);
+        data_ += ",";
+        data_ += String(mpu.ay);
+        data_ += ",";
+        data_ += String(mpu.az);
+        data_ += "\n";
 
+        // Sole
+        sole.update();
         for (int i = 0; i < sole.rows(); i++)
         {
             data_ += "z";
             data_ += sole.printRow(i);
-
-            if (i != sole.rows())
+            if (i < sole.rows() - 1)
             {
                 data_ += "\n";
             }
-            // data_ += sole.printRow(i);
         }
         Serial.println(data_); // DEBUG
         ws.textAll(data_);
-        delay(15); // websocket !!
-        // Serial.println(data_); // for Processing
-        // delay(2); // serial !!
+        delay(15);
     }
 }
