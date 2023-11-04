@@ -4,12 +4,12 @@
 #include "ESP32/FilesManager.h"
 #include "ESP32/WifiManager.h"
 #include "Shields/ResistiveMatrix.h"
-#include "tools/SingleNeopixAnimator.h"
+// #include "tools/SingleNeopixAnimator.h"
 #include "tools/WifiConfigServer.h"
 #include "Movuino/MPU9250.h"
 
 // Base
-SingleNeopixAnimator led = SingleNeopixAnimator(PIN_NEOPIX);
+// SingleNeopixAnimator led = SingleNeopixAnimator(PIN_NEOPIX);
 MovuinoMPU9250 mpu = MovuinoMPU9250();
 
 // Shield
@@ -62,9 +62,9 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 
 void startAPWifiConfig()
 {
-    led.setColor(RED);
-    led.blinkOn(200, 5);
-    led.asyncBlinkOn(2000, 400);
+    // led.setColor(RED);
+    // led.blinkOn(200, 5);
+    // led.asyncBlinkOn(2000, 400);
     if (startAccessPoint("Sensitive-Sole", "", "192.168.4.1"))
     {
         startWifiConfigServer();
@@ -79,13 +79,14 @@ void setup()
 
     // Sensitive sole
     sole.begin();
+
     mpu.begin();
 
     // Neopixel
-    led.begin();
-    led.setBrightness(5);
-    led.setColor(BLUE);
-    led.forceUpdate();
+    // led.begin();
+    // led.setBrightness(5);
+    // led.setColor(BLUE);
+    // led.forceUpdate();
 
     // SPIFFS (read stored config)
     startSPIFFS();
@@ -119,14 +120,14 @@ void setup()
         server.addHandler(&ws);
         server.begin();
 
-        led.setColor(GREEN);
-        led.breathOn(700, 0.5);
+        // led.setColor(GREEN);
+        // led.breathOn(700, 0.5);
     }
 }
 
 void loop()
 {
-    led.update();
+    // led.update();
 
     if (isWifiConnected())
     {
@@ -139,22 +140,33 @@ void loop()
         mpu.update();
         String data_ = "a";
         data_ += String(mpu.ax);
+        // data_ += "0.5";
         data_ += ",";
         data_ += String(mpu.ay);
+        // data_ += "-0.5";
         data_ += ",";
         data_ += String(mpu.az);
-        ws.textAll(data_);
-        delay(15);
+        // data_ += "1";
+        data_ += "\n";
 
         sole.update();
-        data_ = "z";
+        // Serial.println(sole.printRow(1));
+
         for (int i = 0; i < sole.rows(); i++)
         {
+            data_ += "z";
             data_ += sole.printRow(i);
-            data_ += 'q';
+
+            if (i != sole.rows())
+            {
+                data_ += "\n";
+            }
+            // data_ += sole.printRow(i);
         }
+        Serial.println(data_); // DEBUG
         ws.textAll(data_);
+        delay(15); // websocket !!
         // Serial.println(data_); // for Processing
-        delay(15);
+        // delay(2); // serial !!
     }
 }

@@ -4,22 +4,27 @@
 #include <Arduino.h>
 
 // row MUX pins
-#define S0 13
-#define S1 4
-#define S2 15
-#define S3 14
-#define pinSigRow 12
+#define S0 27
+#define S1 14
+#define S2 15 // CHANGE WITH 4 ? Neopixel or INT MPUT
+#define S3 12
+#define pinSigRow 2
 int rowCtrlPin[] = {S0, S1, S2, S3};
 
 // col MUX pins
-#define A 33
-#define B 32
-#define C 26
-#define D 27
-#define pinSigCol 34 // 25
+#define A 32
+#define B 33
+#define C 25
+#define D 26
+#define pinSigCol 39
 int colCtrlPin[] = {A, B, C, D};
 
-int muxChannel[16][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}, {0, 0, 0, 1}, {1, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1}, {0, 0, 1, 1}, {1, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}};
+int muxChannel[16][4] = {
+  {0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0},
+  {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0},
+  {0, 0, 0, 1}, {1, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1},
+  {0, 0, 1, 1}, {1, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}
+};
 
 class MovuinoResistiveMatrix
 {
@@ -82,12 +87,12 @@ void MovuinoResistiveMatrix::begin()
   pinMode(B, OUTPUT);
   pinMode(C, OUTPUT);
   pinMode(D, OUTPUT);
-  pinMode(pinSigCol, INPUT);
+  // pinMode(pinSigCol, INPUT);
   digitalWrite(A, LOW);
   digitalWrite(B, LOW);
   digitalWrite(C, LOW);
   digitalWrite(D, LOW);
-  digitalWrite(pinSigCol, 0); // Pull down
+  // digitalWrite(pinSigCol, 0); // Pull down
 }
 
 void MovuinoResistiveMatrix::update()
@@ -104,22 +109,32 @@ void MovuinoResistiveMatrix::update()
     // ACTIVATE row
     digitalWrite(pinSigRow, HIGH);
 
+    // delay(1000); // !!!!!!!!!!!!!!
+
     // READ COL VALUES
     for (int col = 0; col < this->_cols; col++)
     {
-      // this->_lastUpdate[col][row] = this->readMux(col);
-      int offset_ = (row + col) * 100;
-      this->_lastUpdate[col][row] = 1024 * (1.0 + cos(1.4 * millis() / 1000.0 + offset_)) / 2.; // fake data
+      this->_lastUpdate[col][row] = this->readMux(col);
+      // delay(500);
+
+      // // ***********
+      // // DEBUG
+      // int offset_ = (row + col) * 100;
+      // this->_lastUpdate[col][row] = 1024 * (1.0 + cos(1.4 * millis() / 1000.0 + offset_)) / 2.; // fake data
+      // // ***********
     }
 
     // DEACTIVATE row
     digitalWrite(pinSigRow, LOW);
+
+    // delay(1000); // !!!!!!!!!!!!!!  
   }
 }
 
 int MovuinoResistiveMatrix::readMux(int col)
 {
-  for (int i = 0; i < 4; i++)
+  // for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 3; i++)
   {
     digitalWrite(colCtrlPin[i], muxChannel[col][i]);
   } // read the value at the SIG pin
