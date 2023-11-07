@@ -6,7 +6,7 @@
 // row MUX pins
 #define S0 27
 #define S1 14
-#define S2 15 // CHANGE WITH 4 ? Neopixel or INT MPUT
+#define S2 15 // CHANGE WITH 4 ? Neopixel or INT MPUT OR 5 ??
 #define S3 12
 #define pinSigRow 2
 int rowCtrlPin[] = {S0, S1, S2, S3};

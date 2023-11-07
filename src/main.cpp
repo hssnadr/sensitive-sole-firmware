@@ -20,6 +20,8 @@ MovuinoResistiveMatrix sole = MovuinoResistiveMatrix(COLS, ROWS);
 // Websockets
 AsyncWebServer server(443);
 AsyncWebSocket ws("/ws");
+String wsMessage = "";
+long wsTimer0;
 
 int latestClientId = -1;
 
@@ -117,6 +119,7 @@ void setup()
 
         // Start websocket on server
         ws.onEvent(onEvent);
+        wsTimer0 = millis();
         server.addHandler(&ws);
         server.begin();
 
@@ -138,33 +141,40 @@ void loop()
         // ws.cleanupClients(); // to check: https://m1cr0lab-esp32.github.io/remote-control-with-websocket/websocket-setup/
 
         // Time
-        String data_ = "t";
-        data_ += String(millis());
-        data_ += "\n";
+        wsMessage += "t";
+        wsMessage += String(millis());
+        wsMessage += "\n";
 
         // IMU
         mpu.update();
-        data_ += "a";
-        data_ += String(mpu.ax);
-        data_ += ",";
-        data_ += String(mpu.ay);
-        data_ += ",";
-        data_ += String(mpu.az);
-        data_ += "\n";
+        wsMessage += "a";
+        wsMessage += String(mpu.ax);
+        wsMessage += ",";
+        wsMessage += String(mpu.ay);
+        wsMessage += ",";
+        wsMessage += String(mpu.az);
+        wsMessage += "\n";
 
         // Sole
         sole.update();
         for (int i = 0; i < sole.rows(); i++)
         {
-            data_ += "z";
-            data_ += sole.printRow(i);
-            if (i < sole.rows() - 1)
-            {
-                data_ += "\n";
-            }
+            wsMessage += "z";
+            wsMessage += sole.printRow(i);
+            wsMessage += "\n";
         }
-        Serial.println(data_); // DEBUG
-        ws.textAll(data_);
-        delay(15);
+
+        if (millis() - wsTimer0 > 500)
+        {
+            // Serial.println(millis() - wsTimer0);
+            // Serial.println(wsMessage); // DEBUG
+            ws.textAll(wsMessage);
+            wsMessage = "";
+            
+            wsTimer0 = millis();
+            // delay(15);
+        }
+
+        delay(5);
     }
 }
