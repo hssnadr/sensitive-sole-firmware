@@ -157,22 +157,15 @@ void loop()
 
         // Sole
         sole.update();
-        for (int i = 0; i < sole.rows(); i++)
-        {
-            wsMessage += "z";
-            wsMessage += sole.printRow(i);
-            wsMessage += "\n";
-        }
-
+        wsMessage += "z";
+        wsMessage += sole.print();
+        wsMessage += "\n";
+        
         if (millis() - wsTimer0 > 500)
         {
-            // Serial.println(millis() - wsTimer0);
-            // Serial.println(wsMessage); // DEBUG
             ws.textAll(wsMessage);
             wsMessage = "";
-            
             wsTimer0 = millis();
-            // delay(15);
         }
 
         delay(5);

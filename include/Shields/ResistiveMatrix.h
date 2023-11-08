@@ -20,11 +20,7 @@ int rowCtrlPin[] = {S0, S1, S2, S3};
 int colCtrlPin[] = {A, B, C, D};
 
 int muxChannel[16][4] = {
-  {0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0},
-  {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0},
-  {0, 0, 0, 1}, {1, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1},
-  {0, 0, 1, 1}, {1, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}
-};
+    {0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}, {0, 0, 0, 1}, {1, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1}, {0, 0, 1, 1}, {1, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}};
 
 class MovuinoResistiveMatrix
 {
@@ -43,6 +39,7 @@ public:
   void begin();
   void update();
   String printRow(int row_);
+  String print();
   int readMux(int channel);
   int getValue(int col, int row);
   int rows() { return this->_rows; }
@@ -127,7 +124,7 @@ void MovuinoResistiveMatrix::update()
     // DEACTIVATE row
     digitalWrite(pinSigRow, LOW);
 
-    // delay(1000); // !!!!!!!!!!!!!!  
+    // delay(1000); // !!!!!!!!!!!!!!
   }
 }
 
@@ -147,10 +144,27 @@ String MovuinoResistiveMatrix::printRow(int row_)
 {
   String data_ = String(row_);
 
-  for (int j = 0; j < this->_cols; j++)
+  for (int i = 0; i < this->_cols; i++)
   {
     data_ += "x";
-    data_ += String(this->_lastUpdate[j][row_]);
+    data_ += String(this->_lastUpdate[i][row_]);
+  }
+  return data_;
+}
+
+String MovuinoResistiveMatrix::print()
+{
+  String data_ = "";
+  for (int i = 0; i < this->_rows; i++)
+  {
+    for (int j = 0; j < this->_cols; j++)
+    {
+      if (i != 0 || j != 0)
+      {
+        data_ += "x";
+      }
+      data_ += String(this->_lastUpdate[j][i]);
+    }
   }
   return data_;
 }
