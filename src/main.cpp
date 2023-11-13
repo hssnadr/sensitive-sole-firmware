@@ -4,12 +4,12 @@
 #include "ESP32/FilesManager.h"
 #include "ESP32/WifiManager.h"
 #include "Shields/ResistiveMatrix.h"
-// #include "tools/SingleNeopixAnimator.h"
+#include "tools/SingleNeopixAnimator.h"
 #include "tools/WifiConfigServer.h"
 #include "Movuino/MPU9250.h"
 
 // Base
-// SingleNeopixAnimator led = SingleNeopixAnimator(PIN_NEOPIX);
+SingleNeopixAnimator led = SingleNeopixAnimator(PIN_NEOPIX);
 MovuinoMPU9250 mpu = MovuinoMPU9250();
 
 // Shield
@@ -64,9 +64,9 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 
 void startAPWifiConfig()
 {
-    // led.setColor(RED);
-    // led.blinkOn(200, 5);
-    // led.asyncBlinkOn(2000, 400);
+    led.setColor(RED);
+    led.blinkOn(200, 5);
+    led.asyncBlinkOn(2000, 400);
     if (startAccessPoint("Sensitive-Sole", "", "192.168.4.1"))
     {
         startWifiConfigServer();
@@ -85,10 +85,10 @@ void setup()
     mpu.begin();
 
     // Neopixel
-    // led.begin();
-    // led.setBrightness(5);
-    // led.setColor(BLUE);
-    // led.forceUpdate();
+    led.begin();
+    led.setBrightness(5);
+    led.setColor(BLUE);
+    led.forceUpdate();
 
     // SPIFFS (read stored config)
     startSPIFFS();
@@ -123,14 +123,14 @@ void setup()
         server.addHandler(&ws);
         server.begin();
 
-        // led.setColor(GREEN);
-        // led.breathOn(700, 0.5);
+        led.setColor(GREEN);
+        led.breathOn(700, 0.5);
     }
 }
 
 void loop()
 {
-    // led.update();
+    led.update();
 
     if (isWifiConnected())
     {
@@ -161,7 +161,7 @@ void loop()
         wsMessage += sole.print();
         wsMessage += "\n";
         
-        if (millis() - wsTimer0 > 500)
+        if (millis() - wsTimer0 > 50)
         {
             ws.textAll(wsMessage);
             wsMessage = "";
