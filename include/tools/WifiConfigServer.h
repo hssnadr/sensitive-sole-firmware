@@ -17,7 +17,7 @@ void startWifiConfigServer()
               {
                         for (int i = 0; i < request->params(); i++)
                         {
-                            AsyncWebParameter *p = request->getParam(i);
+                            const AsyncWebParameter *p = request->getParam(i);
                             Serial.println(p->name());
                             Serial.print('\t');
                             Serial.print(p->value());
